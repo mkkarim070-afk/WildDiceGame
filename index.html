@@ -7,9 +7,47 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Loading screen */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #4361ee;
+            border-top: 5px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="loader"></div>
+        <h3 style="color: white; margin-top: 20px;">Loading Wild Dice Quest...</h3>
+    </div>
+
+    <!-- Main Game Container -->
+    <div class="container" style="display: none;">
         <!-- Game Header -->
         <header class="game-header">
             <button class="btn-home" id="homeBtn">
@@ -85,20 +123,57 @@
                 <i class="fas fa-lightbulb"></i> HINT
             </button>
             <button class="btn-sound" id="soundBtn">
-                <i class="fas fa-volume-up"></i> SOUND
+                <i class="fas fa-volume-up"></i> SOUND ON
             </button>
         </div>
 
         <!-- Message Toast -->
         <div class="toast" id="toast"></div>
-
-        <!-- Audio Elements -->
-        <audio id="diceSound" src="https://assets.mixkit.co/sfx/preview/mixkit-dice-roll-1994.mp3"></audio>
-        <audio id="tileSound" src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"></audio>
-        <audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
-        <audio id="loseSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
     </div>
 
+    <!-- Audio Elements -->
+    <audio id="diceSound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-dice-roll-1994.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="tileSound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="winSound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="loseSound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- JavaScript Files -->
+    <script>
+        // Simple loader
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loading').style.display = 'none';
+                document.querySelector('.container').style.display = 'block';
+            }, 1000);
+        });
+    </script>
+    
+    <!-- MAIN GAME SCRIPT -->
     <script src="game.js"></script>
+    
+    <!-- Fallback if game.js fails -->
+    <script>
+        // Check if game.js loaded
+        setTimeout(function() {
+            if (typeof initGame === 'undefined') {
+                document.getElementById('toast').innerHTML = 
+                    'Game script loading... Please wait or refresh.';
+                document.getElementById('toast').classList.add('show');
+                
+                // Try to load again
+                var script = document.createElement('script');
+                script.src = 'game.js?v=' + new Date().getTime();
+                document.head.appendChild(script);
+            }
+        }, 2000);
+    </script>
 </body>
 </html>
