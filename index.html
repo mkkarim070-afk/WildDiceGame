@@ -1,61 +1,102 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wild Dice Quest 🎲</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="game-header">
-        <button class="btn-home" onclick="goHome()">
-            <i class="fas fa-home"></i>
-        </button>
-        <div class="level-display">
-            <span class="level-label">LEVEL</span>
-            <span id="levelNumber" class="level-number">1</span>
-        </div>
-        <div class="stars-display">
-            <span id="stars">⭐</span>
-            <span class="points" id="points">0</span>
-        </div>
-    </header>
+    <div class="container">
+        <!-- Game Header -->
+        <header class="game-header">
+            <button class="btn-home" id="homeBtn">
+                <i class="fas fa-home"></i>
+            </button>
+            <div class="game-info">
+                <div class="level-display">
+                    <span class="level-label">LEVEL</span>
+                    <span id="levelNumber" class="level-number">1</span>
+                    <span class="level-total">/100</span>
+                </div>
+                <div class="stars-display">
+                    <div class="stars" id="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="far fa-star"></i>
+                        <i class="far fa-star"></i>
+                    </div>
+                    <div class="score" id="score">0</div>
+                </div>
+            </div>
+        </header>
 
-    <div class="target-container">
-        <h3>TARGET:</h3>
-        <div class="target-items" id="targetItems">
-            <div class="target-item">
-                <span class="tile-icon">🦁</span>
-                <span class="target-count" id="targetAnimals">5</span>
+        <!-- Target Display -->
+        <div class="target-container">
+            <h3 class="target-title">TARGETS</h3>
+            <div class="targets-grid" id="targetsGrid">
+                <!-- Targets will be added by JavaScript -->
             </div>
         </div>
-    </div>
 
-    <div class="game-board" id="gameBoard"></div>
+        <!-- Game Board - Vita Mahjong Style -->
+        <div class="game-board" id="gameBoard">
+            <!-- 3D Pyramid Tiles will be added by JavaScript -->
+        </div>
 
-    <div class="dice-section">
-        <div class="dice-container">
-            <div class="dice" id="dice" onclick="rollDice()">
-                <div class="dice-face" id="diceValue">?</div>
-            </div>
-            <div class="dice-info">
-                <p>Rolls Left: <span id="rollsLeft">10</span></p>
-                <button class="btn-extra" onclick="getExtraDice()">
-                    +1 Dice via Ad
+        <!-- Dice Section -->
+        <div class="dice-section">
+            <div class="dice-container">
+                <div class="dice" id="dice">
+                    <div class="dice-face front">1</div>
+                    <div class="dice-face back">6</div>
+                    <div class="dice-face right">2</div>
+                    <div class="dice-face left">5</div>
+                    <div class="dice-face top">3</div>
+                    <div class="dice-face bottom">4</div>
+                </div>
+                <div class="dice-stats">
+                    <div class="rolls-left">
+                        <i class="fas fa-dice"></i>
+                        <span>Rolls Left: <span id="rollsLeft">15</span></span>
+                    </div>
+                    <div class="rolls-total">
+                        <span>Total Rolls: <span id="totalRolls">0</span></span>
+                    </div>
+                </div>
+                <button class="btn-roll" id="rollBtn">
+                    <i class="fas fa-redo"></i> ROLL DICE
+                </button>
+                <button class="btn-extra" id="extraDiceBtn">
+                    <i class="fas fa-plus"></i> GET EXTRA DICE
                 </button>
             </div>
         </div>
-    </div>
 
-    <div class="controls">
-        <div class="moves-counter">
-            <i class="fas fa-dice"></i>
-            <span id="movesCount">0</span>/<span id="totalMoves">10</span>
+        <!-- Game Controls -->
+        <div class="controls">
+            <button class="btn-reset" id="resetBtn">
+                <i class="fas fa-redo"></i> RESET LEVEL
+            </button>
+            <button class="btn-hint" id="hintBtn">
+                <i class="fas fa-lightbulb"></i> HINT
+            </button>
+            <button class="btn-sound" id="soundBtn">
+                <i class="fas fa-volume-up"></i> SOUND
+            </button>
         </div>
-        <button class="btn-reset" onclick="resetLevel()">
-            <i class="fas fa-redo"></i> Reset
-        </button>
+
+        <!-- Message Toast -->
+        <div class="toast" id="toast"></div>
+
+        <!-- Audio Elements -->
+        <audio id="diceSound" src="https://assets.mixkit.co/sfx/preview/mixkit-dice-roll-1994.mp3"></audio>
+        <audio id="tileSound" src="https://assets.mixkit.co/sfx/preview/mixkit-select-click-1109.mp3"></audio>
+        <audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
+        <audio id="loseSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
     </div>
 
     <script src="game.js"></script>
