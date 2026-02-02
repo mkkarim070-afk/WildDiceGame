@@ -5,486 +5,305 @@ const CONFIG = {
     diceCount: 15,
     score: 0,
     soundEnabled: true,
-    totalRolls: 0,
-    selectedTiles: [],
-    maxSelection: 0
+    maxSelection: 0,
+    selectedTiles: []
 };
 
-// Tile Categories with exact distribution
+// Tile Categories
 const TILE_CATEGORIES = {
     animals: {
         name: "Animals",
         icon: "🦁",
         percentage: 30,
-        types: [
-            { name: "Lion", icon: "🦁", color: "#FF6B35" },
-            { name: "Elephant", icon: "🐘", color: "#4361EE" },
-            { name: "Giraffe", icon: "🦒", color: "#FFD166" },
-            { name: "Panda", icon: "🐼", color: "#000000" },
-            { name: "Tiger", icon: "🐯", color: "#FF9E00" },
-            { name: "Fox", icon: "🦊", color: "#FF5400" },
-            { name: "Bear", icon: "🐻", color: "#8B4513" },
-            { name: "Zebra", icon: "🦓", color: "#000000" },
-            { name: "Rhino", icon: "🦏", color: "#6D6875" },
-            { name: "Kangaroo", icon: "🦘", color: "#FFB4A2" },
-            { name: "Hippo", icon: "🦛", color: "#B5838D" },
-            { name: "Monkey", icon: "🐵", color: "#A663CC" }
-        ]
+        tiles: ["🦁", "🐘", "🦒", "🐼", "🐯", "🦊", "🐻", "🦓"]
     },
     birds: {
-        name: "Birds",
+        name: "Birds", 
         icon: "🦜",
         percentage: 25,
-        types: [
-            { name: "Parrot", icon: "🦜", color: "#06D6A0" },
-            { name: "Eagle", icon: "🦅", color: "#8338EC" },
-            { name: "Peacock", icon: "🦚", color: "#3A86FF" },
-            { name: "Owl", icon: "🦉", color: "#774936" },
-            { name: "Flamingo", icon: "🦩", color: "#FF006E" },
-            { name: "Swan", icon: "🦢", color: "#FFFFFF" },
-            { name: "Hummingbird", icon: "🐦", color: "#FB5607" },
-            { name: "Penguin", icon: "🐧", color: "#000000" },
-            { name: "Rooster", icon: "🐓", color: "#FFBE0B" },
-            { name: "Duck", icon: "🦆", color: "#FF9E00" }
-        ]
+        tiles: ["🦜", "🦅", "🦚", "🦉", "🦩", "🦢", "🐦", "🐓"]
     },
     flowers: {
         name: "Flowers",
         icon: "🌹",
         percentage: 25,
-        types: [
-            { name: "Rose", icon: "🌹", color: "#FF006E" },
-            { name: "Sunflower", icon: "🌻", color: "#FFBE0B" },
-            { name: "Tulip", icon: "🌷", color: "#FF5400" },
-            { name: "Cherry Blossom", icon: "🌸", color: "#FFAFCC" },
-            { name: "Lotus", icon: "🪷", color: "#FF8FA3" },
-            { name: "Hibiscus", icon: "🌺", color: "#FB5607" },
-            { name: "Lavender", icon: "🪻", color: "#9B5DE5" },
-            { name: "Daisy", icon: "🌼", color: "#FFD166" },
-            { name: "Orchid", icon: "💐", color: "#8338EC" },
-            { name: "Cactus", icon: "🌵", color: "#06D6A0" }
-        ]
+        tiles: ["🌹", "🌸", "🌻", "🌺", "🌷", "💐", "🪷", "🌼"]
     },
     fruits: {
         name: "Fruits",
         icon: "🍎",
         percentage: 20,
-        types: [
-            { name: "Apple", icon: "🍎", color: "#FF0000" },
-            { name: "Banana", icon: "🍌", color: "#FFBE0B" },
-            { name: "Grapes", icon: "🍇", color: "#7209B7" },
-            { name: "Orange", icon: "🍊", color: "#FF9E00" },
-            { name: "Strawberry", icon: "🍓", color: "#FF006E" },
-            { name: "Pineapple", icon: "🍍", color: "#FFD166" },
-            { name: "Watermelon", icon: "🍉", color: "#06D6A0" },
-            { name: "Mango", icon: "🥭", color: "#FF9E00" },
-            { name: "Peach", icon: "🍑", color: "#FFAFCC" },
-            { name: "Pear", icon: "🍐", color: "#C1E1C1" }
-        ]
+        tiles: ["🍎", "🍌", "🍇", "🍊", "🍓", "🍍", "🥭", "🍑"]
     }
 };
 
 // Game State
 let gameState = {
     currentTargets: {},
-    diceAI: null,
-    levelComplete: false,
-    lastSixRoll: -5
+    lastSix: -5,
+    totalRolls: 0
 };
-
-// Dice AI Class
-class DiceAI {
-    constructor() {
-        this.rollHistory = [];
-        this.consecutiveLowRolls = 0;
-        this.playerStuck = false;
-    }
-    
-    calculateRoll() {
-        const currentLevel = CONFIG.currentLevel;
-        const rollsLeft = CONFIG.diceCount;
-        const totalRolls = CONFIG.totalRolls;
-        
-        // Base random roll
-        let baseRoll = Math.floor(Math.random() * 6) + 1;
-        
-        // Strategic AI Logic
-        if (this.shouldGiveSix()) {
-            baseRoll = 6;
-            this.handleSpecialSix();
-        } else if (this.shouldGiveHighRoll()) {
-            baseRoll = this.weightedRoll([4, 5, 6, 3, 2, 1], [30, 25, 20, 15, 7, 3]);
-        } else if (this.shouldGiveLowRoll()) {
-            baseRoll = this.weightedRoll([1, 2, 3, 4, 5, 6], [40, 25, 20, 10, 4, 1]);
-        }
-        
-        this.rollHistory.push(baseRoll);
-        this.updatePlayerState(baseRoll);
-        
-        return baseRoll;
-    }
-    
-    shouldGiveSix() {
-        const rolls = this.rollHistory.length;
-        const lastSix = gameState.lastSixRoll;
-        
-        // Give six on first roll
-        if (rolls === 0) return Math.random() < 0.3;
-        
-        // Give six when player stuck
-        if (this.playerStuck && rolls - lastSix > 3) return Math.random() < 0.7;
-        
-        // Give six on last few dice
-        if (CONFIG.diceCount <= 3 && rolls - lastSix > 2) return Math.random() < 0.6;
-        
-        // Random strategic six (10% chance)
-        if (Math.random() < 0.1 && rolls - lastSix > 5) return true;
-        
-        return false;
-    }
-    
-    shouldGiveHighRoll() {
-        // Early in level
-        if (CONFIG.totalRolls < 3) return true;
-        
-        // When player needs to catch up
-        if (this.playerStuck) return true;
-        
-        // After consecutive low rolls
-        if (this.consecutiveLowRolls >= 2) return true;
-        
-        return false;
-    }
-    
-    shouldGiveLowRoll() {
-        // When player is doing too well
-        const completion = this.calculateTargetCompletion();
-        if (completion > 0.7 && CONFIG.diceCount > 10) return true;
-        
-        // On high difficulty levels
-        if (CONFIG.currentLevel > 50) return Math.random() < 0.3;
-        
-        return false;
-    }
-    
-    handleSpecialSix() {
-        gameState.lastSixRoll = this.rollHistory.length;
-        
-        // Give extra dice on special six
-        if (CONFIG.diceCount < 25 && Math.random() < 0.5) {
-            CONFIG.diceCount++;
-            showToast("🎉 Special Six! +1 Extra Dice!", "success");
-            updateDiceDisplay();
-        }
-    }
-    
-    weightedRoll(numbers, weights) {
-        const total = weights.reduce((a, b) => a + b, 0);
-        const random = Math.random() * total;
-        let sum = 0;
-        
-        for (let i = 0; i < numbers.length; i++) {
-            sum += weights[i];
-            if (random < sum) return numbers[i];
-        }
-        return numbers[0];
-    }
-    
-    updatePlayerState(roll) {
-        // Track consecutive low rolls
-        if (roll <= 2) {
-            this.consecutiveLowRolls++;
-        } else {
-            this.consecutiveLowRolls = 0;
-        }
-        
-        // Detect if player is stuck
-        const completion = this.calculateTargetCompletion();
-        const expectedProgress = CONFIG.totalRolls * 0.1;
-        this.playerStuck = completion < expectedProgress - 0.2;
-    }
-    
-    calculateTargetCompletion() {
-        const totalNeeded = Object.values(gameState.currentTargets).reduce((a, b) => a + b.needed, 0);
-        const totalCollected = Object.values(gameState.currentTargets).reduce((a, b) => a + b.collected, 0);
-        return totalNeeded > 0 ? totalCollected / totalNeeded : 0;
-    }
-}
 
 // Initialize Game
 function initGame() {
-    gameState.diceAI = new DiceAI();
-    generateLevelTargets();
-    generateTileGrid();
-    updateDisplay();
+    generateLevel();
     setupEventListeners();
+    updateDisplay();
 }
 
-// Generate Level Targets
-function generateLevelTargets() {
-    const level = CONFIG.currentLevel;
-    gameState.currentTargets = {};
+// Generate Level
+function generateLevel() {
+    // Clear previous
+    CONFIG.selectedTiles = [];
+    CONFIG.maxSelection = 0;
     
-    // Determine number of target categories based on level
-    let categoriesCount;
-    if (level <= 9) categoriesCount = 1;
-    else if (level <= 29) categoriesCount = 2;
-    else if (level <= 49) categoriesCount = 3;
-    else categoriesCount = 4;
+    // Set dice count based on level
+    if (CONFIG.currentLevel <= 9) CONFIG.diceCount = 20;
+    else if (CONFIG.currentLevel <= 29) CONFIG.diceCount = 18;
+    else if (CONFIG.currentLevel <= 49) CONFIG.diceCount = 16;
+    else if (CONFIG.currentLevel <= 69) CONFIG.diceCount = 14;
+    else if (CONFIG.currentLevel <= 89) CONFIG.diceCount = 12;
+    else CONFIG.diceCount = 10;
+    
+    // Generate targets
+    generateTargets();
+    
+    // Generate tiles
+    generateTiles();
+    
+    // Update display
+    updateDisplay();
+}
+
+// Generate Targets
+function generateTargets() {
+    gameState.currentTargets = {};
+    const level = CONFIG.currentLevel;
+    
+    // Determine number of target types
+    let targetTypes;
+    if (level <= 9) targetTypes = 1;
+    else if (level <= 29) targetTypes = 2;
+    else if (level <= 49) targetTypes = 3;
+    else targetTypes = 4;
     
     // Select random categories
-    const allCategories = Object.keys(TILE_CATEGORIES);
-    const selectedCategories = [];
+    const categories = Object.keys(TILE_CATEGORIES);
+    const selected = [];
     
-    while (selectedCategories.length < categoriesCount) {
-        const randomCat = allCategories[Math.floor(Math.random() * allCategories.length)];
-        if (!selectedCategories.includes(randomCat)) {
-            selectedCategories.push(randomCat);
+    while (selected.length < targetTypes) {
+        const randomCat = categories[Math.floor(Math.random() * categories.length)];
+        if (!selected.includes(randomCat)) {
+            selected.push(randomCat);
         }
     }
     
-    // Generate targets for each selected category
-    selectedCategories.forEach(category => {
-        const baseAmount = Math.floor(level / 3) + 3;
-        const variance = Math.floor(baseAmount * 0.3);
-        const needed = baseAmount + Math.floor(Math.random() * variance);
+    // Create targets
+    selected.forEach(category => {
+        const base = Math.floor(level / 3) + 3;
+        const needed = base + Math.floor(Math.random() * 3);
         
         gameState.currentTargets[category] = {
             name: TILE_CATEGORIES[category].name,
             icon: TILE_CATEGORIES[category].icon,
             needed: needed,
-            collected: 0,
-            color: TILE_CATEGORIES[category].types[0].color
+            collected: 0
         };
     });
     
-    updateTargetDisplay();
+    updateTargetsDisplay();
 }
 
-// Generate Vita Mahjong 3D Tile Grid
-function generateTileGrid() {
-    const gameBoard = document.getElementById('gameBoard');
-    gameBoard.innerHTML = '';
+// Generate Tiles
+function generateTiles() {
+    const board = document.getElementById('gameBoard');
+    board.innerHTML = '';
     
-    // Calculate total tiles needed (12 tiles for 3 layers)
+    // Calculate tile distribution
     const totalTiles = 12;
-    const tileCounts = calculateTileDistribution(totalTiles);
+    const counts = {
+        animals: Math.floor(totalTiles * 0.30),
+        birds: Math.floor(totalTiles * 0.25),
+        flowers: Math.floor(totalTiles * 0.25),
+        fruits: Math.floor(totalTiles * 0.20)
+    };
     
-    // Create all tiles
-    const allTiles = [];
-    Object.keys(tileCounts).forEach(category => {
-        for (let i = 0; i < tileCounts[category]; i++) {
-            const type = TILE_CATEGORIES[category].types[
-                Math.floor(Math.random() * TILE_CATEGORIES[category].types.length)
+    // Create tile array
+    let allTiles = [];
+    
+    Object.keys(counts).forEach(category => {
+        for (let i = 0; i < counts[category]; i++) {
+            const tile = TILE_CATEGORIES[category].tiles[
+                Math.floor(Math.random() * TILE_CATEGORIES[category].tiles.length)
             ];
             allTiles.push({
                 category: category,
-                name: type.name,
-                icon: type.icon,
-                color: type.color
+                emoji: tile,
+                id: Math.random().toString(36).substr(2, 9)
             });
         }
     });
     
-    // Shuffle tiles
+    // Shuffle and create tiles
     shuffleArray(allTiles);
     
-    // Create 3D pyramid layout
-    const layers = [
-        { count: 5, zIndex: 0, className: 'layer-1' },  // Bottom layer
-        { count: 4, zIndex: 30, className: 'layer-2' }, // Middle layer
-        { count: 3, zIndex: 60, className: 'layer-3' }  // Top layer
-    ];
-    
-    let tileIndex = 0;
-    layers.forEach(layer => {
-        const layerDiv = document.createElement('div');
-        layerDiv.className = `tile-layer ${layer.className}`;
-        layerDiv.style.transform = `translateZ(${layer.zIndex}px)`;
+    allTiles.forEach((tile, index) => {
+        const tileElement = document.createElement('div');
+        tileElement.className = 'tile';
+        tileElement.innerHTML = tile.emoji;
+        tileElement.dataset.id = tile.id;
+        tileElement.dataset.category = tile.category;
         
-        for (let i = 0; i < layer.count && tileIndex < allTiles.length; i++) {
-            const tile = allTiles[tileIndex];
-            const tileElement = createTileElement(tile, tileIndex);
-            layerDiv.appendChild(tileElement);
-            tileIndex++;
-        }
-        
-        gameBoard.appendChild(layerDiv);
+        tileElement.addEventListener('click', () => selectTile(tileElement));
+        board.appendChild(tileElement);
     });
-}
-
-// Calculate exact tile distribution
-function calculateTileDistribution(totalTiles) {
-    const counts = {};
-    let remainingTiles = totalTiles;
-    
-    Object.keys(TILE_CATEGORIES).forEach(category => {
-        const percentage = TILE_CATEGORIES[category].percentage;
-        const count = Math.floor(totalTiles * (percentage / 100));
-        counts[category] = count;
-        remainingTiles -= count;
-    });
-    
-    // Distribute remaining tiles
-    const categories = Object.keys(TILE_CATEGORIES);
-    for (let i = 0; i < remainingTiles; i++) {
-        const randomCat = categories[Math.floor(Math.random() * categories.length)];
-        counts[randomCat]++;
-    }
-    
-    return counts;
-}
-
-// Create individual tile element
-function createTileElement(tileData, index) {
-    const tile = document.createElement('div');
-    tile.className = 'tile';
-    tile.dataset.index = index;
-    tile.dataset.category = tileData.category;
-    tile.dataset.name = tileData.name;
-    
-    tile.innerHTML = `
-        <div class="tile-icon" style="color: ${tileData.color}">${tileData.icon}</div>
-        <div class="tile-type">${tileData.category}</div>
-    `;
-    
-    tile.addEventListener('click', () => selectTile(tile));
-    return tile;
 }
 
 // Select Tile
-function selectTile(tileElement) {
+function selectTile(tile) {
     if (CONFIG.maxSelection === 0) {
-        showToast("Roll the dice first!", "warning");
+        showMessage("Roll dice first!");
         return;
     }
     
     if (CONFIG.selectedTiles.length >= CONFIG.maxSelection) {
-        showToast(`Already selected ${CONFIG.maxSelection} tiles!`, "warning");
+        showMessage(`Select only ${CONFIG.maxSelection} tiles`);
         return;
     }
     
-    if (tileElement.classList.contains('used')) {
+    if (tile.classList.contains('used')) {
         return;
     }
     
-    if (tileElement.classList.contains('selected')) {
-        // Deselect tile
-        tileElement.classList.remove('selected');
-        const tileIndex = CONFIG.selectedTiles.indexOf(tileElement);
-        if (tileIndex > -1) {
-            CONFIG.selectedTiles.splice(tileIndex, 1);
+    if (tile.classList.contains('selected')) {
+        // Deselect
+        tile.classList.remove('selected');
+        const index = CONFIG.selectedTiles.indexOf(tile);
+        if (index > -1) {
+            CONFIG.selectedTiles.splice(index, 1);
         }
     } else {
-        // Select tile
-        tileElement.classList.add('selected');
-        CONFIG.selectedTiles.push(tileElement);
-        playSound('tileSound');
+        // Select
+        tile.classList.add('selected');
+        CONFIG.selectedTiles.push(tile);
     }
     
-    // If selected enough tiles, process them
+    // Auto process if enough selected
     if (CONFIG.selectedTiles.length === CONFIG.maxSelection) {
-        setTimeout(processSelectedTiles, 500);
+        setTimeout(processTiles, 500);
     }
 }
 
 // Roll Dice
 function rollDice() {
     if (CONFIG.diceCount <= 0) {
-        showToast("No dice left! Reset level.", "error");
+        showMessage("No dice left! Reset level.");
         return;
     }
     
     if (CONFIG.maxSelection > 0) {
-        showToast("Process selected tiles first!", "warning");
+        showMessage("Process selected tiles first!");
         return;
     }
     
     const dice = document.getElementById('dice');
     const rollBtn = document.getElementById('rollBtn');
     
-    // Disable roll button during animation
+    // Disable button during roll
     rollBtn.disabled = true;
     rollBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ROLLING...';
     
     // Add rolling animation
     dice.classList.add('rolling');
-    playSound('diceSound');
     
-    // Calculate roll using AI
+    // Calculate roll with AI logic
     setTimeout(() => {
-        const roll = gameState.diceAI.calculateRoll();
+        const roll = calculateRoll();
         
-        // Update dice display
+        // Update dice
         dice.classList.remove('rolling');
-        dice.style.transform = getDiceRotation(roll);
+        document.getElementById('diceNumber').textContent = roll;
         
         // Update game state
         CONFIG.diceCount--;
-        CONFIG.totalRolls++;
+        gameState.totalRolls++;
         CONFIG.maxSelection = roll;
-        CONFIG.selectedTiles = [];
         
-        // Update UI
+        // Update display
         updateDiceDisplay();
         rollBtn.disabled = false;
         rollBtn.innerHTML = '<i class="fas fa-redo"></i> ROLL DICE';
         
-        // Show roll result
-        showToast(`🎲 You rolled: ${roll} (Select ${roll} tiles)`, "info");
+        showMessage(`🎲 Rolled: ${roll}. Select ${roll} tiles.`);
         
-        // Check if dice exhausted
+        // Check if out of dice
         if (CONFIG.diceCount <= 0) {
-            setTimeout(checkLevelCompletion, 1000);
+            setTimeout(checkLevelComplete, 1000);
         }
-    }, 1500);
+    }, 1000);
 }
 
-// Get dice rotation based on roll
-function getDiceRotation(roll) {
-    const rotations = {
-        1: 'rotateX(0deg) rotateY(0deg)',
-        2: 'rotateX(0deg) rotateY(-90deg)',
-        3: 'rotateX(-90deg) rotateY(0deg)',
-        4: 'rotateX(90deg) rotateY(0deg)',
-        5: 'rotateX(0deg) rotateY(90deg)',
-        6: 'rotateX(180deg) rotateY(0deg)'
-    };
-    return rotations[roll] || rotations[1];
+// Calculate Roll with AI
+function calculateRoll() {
+    const rolls = gameState.totalRolls;
+    const diceLeft = CONFIG.diceCount;
+    const lastSix = gameState.lastSix;
+    
+    // AI Logic
+    if (rolls === 0) {
+        // First roll - higher chance of good number
+        return weightedRandom([4, 5, 6, 3, 2, 1], [25, 25, 20, 15, 10, 5]);
+    }
+    
+    if (diceLeft <= 3 && rolls - lastSix > 2) {
+        // Low dice - give six to help
+        gameState.lastSix = rolls;
+        return 6;
+    }
+    
+    if (rolls - lastSix > 5) {
+        // Haven't gotten six in a while
+        if (Math.random() < 0.4) {
+            gameState.lastSix = rolls;
+            return 6;
+        }
+    }
+    
+    // Normal random
+    return Math.floor(Math.random() * 6) + 1;
 }
 
-// Process selected tiles
-function processSelectedTiles() {
+// Process Selected Tiles
+function processTiles() {
     if (CONFIG.selectedTiles.length === 0) return;
     
-    const tileCounts = {};
-    
-    // Count selected tiles by category
+    // Count tiles by category
+    const counts = {};
     CONFIG.selectedTiles.forEach(tile => {
-        const category = tile.dataset.category;
-        tileCounts[category] = (tileCounts[category] || 0) + 1;
+        const cat = tile.dataset.category;
+        counts[cat] = (counts[cat] || 0) + 1;
     });
     
     // Update targets
-    let pointsEarned = 0;
-    Object.keys(tileCounts).forEach(category => {
+    let points = 0;
+    Object.keys(counts).forEach(category => {
         if (gameState.currentTargets[category]) {
-            const previousCollected = gameState.currentTargets[category].collected;
-            gameState.currentTargets[category].collected += tileCounts[category];
+            const before = gameState.currentTargets[category].collected;
+            gameState.currentTargets[category].collected += counts[category];
             
-            // Cap at needed amount
+            // Cap at needed
             if (gameState.currentTargets[category].collected > gameState.currentTargets[category].needed) {
                 gameState.currentTargets[category].collected = gameState.currentTargets[category].needed;
             }
             
-            // Calculate points (more points for exact matches)
-            const collectedNow = gameState.currentTargets[category].collected - previousCollected;
-            pointsEarned += collectedNow * 100;
+            // Calculate points
+            const collectedNow = gameState.currentTargets[category].collected - before;
+            points += collectedNow * 100;
             
-            // Bonus for exact completion
+            // Bonus for completing category
             if (gameState.currentTargets[category].collected === gameState.currentTargets[category].needed) {
-                pointsEarned += 500;
-                showToast(`✅ ${category.toUpperCase()} target completed! +500 bonus`, "success");
+                points += 500;
+                showMessage(`✅ ${gameState.currentTargets[category].name} completed! +500 bonus`);
             }
         }
     });
@@ -493,123 +312,210 @@ function processSelectedTiles() {
     CONFIG.selectedTiles.forEach(tile => {
         tile.classList.remove('selected');
         tile.classList.add('used');
-        tile.style.pointerEvents = 'none';
     });
     
-    // Update score and display
-    CONFIG.score += pointsEarned;
+    // Update score
+    CONFIG.score += points;
     CONFIG.selectedTiles = [];
     CONFIG.maxSelection = 0;
     
     updateDisplay();
-    updateTargetDisplay();
-    showToast(`+${pointsEarned} points!`, "success");
+    updateTargetsDisplay();
+    showMessage(`+${points} points!`);
     
     // Check level completion
-    setTimeout(checkLevelCompletion, 500);
+    setTimeout(checkLevelComplete, 500);
 }
 
-// Check level completion
-function checkLevelCompletion() {
+// Check Level Complete
+function checkLevelComplete() {
     const allComplete = Object.values(gameState.currentTargets).every(
         target => target.collected >= target.needed
     );
     
     if (allComplete) {
-        gameState.levelComplete = true;
-        const remainingDice = CONFIG.diceCount;
-        const stars = calculateStars(remainingDice);
-        
-        // Calculate bonus points
-        const diceBonus = remainingDice * 50;
+        // Level complete
+        const diceBonus = CONFIG.diceCount * 50;
         const levelBonus = CONFIG.currentLevel * 10;
         const totalBonus = diceBonus + levelBonus;
         
         CONFIG.score += totalBonus;
         
-        // Show victory message
-        setTimeout(() => {
-            playSound('winSound');
-            showToast(
-                `🎉 LEVEL ${CONFIG.currentLevel} COMPLETE!<br>` +
-                `Stars: ${'★'.repeat(stars)}${'☆'.repeat(5-stars)}<br>` +
-                `Bonus: +${totalBonus} points<br>` +
-                `Click to continue to next level`,
-                "success"
-            );
-            
-            // Update stars display
-            updateStars(stars);
-            updateDisplay();
-            
-            // Prepare for next level
-            document.getElementById('gameBoard').addEventListener('click', nextLevel, { once: true });
-        }, 1000);
+        showMessage(
+            `🎉 LEVEL ${CONFIG.currentLevel} COMPLETE!<br>` +
+            `Bonus: +${totalBonus} points<br>` +
+            `Click anywhere to continue`
+        );
+        
+        updateDisplay();
+        
+        // Prepare for next level
+        document.getElementById('gameBoard').addEventListener('click', nextLevel, { once: true });
         
     } else if (CONFIG.diceCount <= 0) {
         // Level failed
-        playSound('loseSound');
-        showToast(
+        showMessage(
             `❌ Out of dice! Level failed.<br>` +
-            `You collected ${getCollectedPercentage()}% of targets.<br>` +
-            `Click RESET to try again.`,
-            "error"
+            `You collected ${getCompletionPercent()}% of targets.<br>` +
+            `Click RESET to try again.`
         );
     }
-}
-
-// Calculate stars based on remaining dice
-function calculateStars(remainingDice) {
-    const totalDice = getLevelDiceLimit();
-    const percentage = (remainingDice / totalDice) * 100;
-    
-    if (percentage >= 80) return 5;
-    if (percentage >= 60) return 4;
-    if (percentage >= 40) return 3;
-    if (percentage >= 20) return 2;
-    return 1;
-}
-
-// Get dice limit for current level
-function getLevelDiceLimit() {
-    const level = CONFIG.currentLevel;
-    if (level <= 9) return 20;
-    if (level <= 29) return 18;
-    if (level <= 49) return 16;
-    if (level <= 69) return 14;
-    if (level <= 89) return 12;
-    return 10;
-}
-
-// Get collected percentage
-function getCollectedPercentage() {
-    const totalNeeded = Object.values(gameState.currentTargets).reduce((a, b) => a + b.needed, 0);
-    const totalCollected = Object.values(gameState.currentTargets).reduce((a, b) => a + b.collected, 0);
-    return totalNeeded > 0 ? Math.round((totalCollected / totalNeeded) * 100) : 0;
 }
 
 // Next Level
 function nextLevel() {
     CONFIG.currentLevel++;
+    if (CONFIG.currentLevel > CONFIG.totalLevels) {
+        CONFIG.currentLevel = 1;
+    }
     
-    // Reset for new level
-    CONFIG.diceCount = getLevelDiceLimit();
-    CONFIG.totalRolls = 0;
-    CONFIG.selectedTiles = [];
-    CONFIG.maxSelection = 0;
-    gameState.levelComplete = false;
-    gameState.lastSixRoll = -5;
-    gameState.diceAI = new DiceAI();
+    gameState.totalRolls = 0;
+    gameState.lastSix = -5;
     
-    // Generate new level
-    generateLevelTargets();
-    generateTileGrid();
-    updateDisplay();
-    
-    showToast(`LEVEL ${CONFIG.currentLevel} - Good luck!`, "info");
+    generateLevel();
+    showMessage(`LEVEL ${CONFIG.currentLevel} - Good luck!`);
 }
 
 // Reset Level
 function resetLevel() {
-    CONFIG.diceCount = getLevelDiceLimit();
-    CONFIG.selectedTiles 
+    generateLevel();
+    showMessage("Level reset!");
+}
+
+// Get Extra Dice
+function getExtraDice() {
+    showMessage("Watching ad for extra dice...");
+    
+    setTimeout(() => {
+        CONFIG.diceCount += 3;
+        updateDiceDisplay();
+        showMessage("+3 dice added!");
+    }, 1500);
+}
+
+// Show Hint
+function showHint() {
+    const incomplete = Object.keys(gameState.currentTargets).filter(
+        cat => gameState.currentTargets[cat].collected < gameState.currentTargets[cat].needed
+    );
+    
+    if (incomplete.length > 0) {
+        const randomCat = incomplete[Math.floor(Math.random() * incomplete.length)];
+        const target = gameState.currentTargets[randomCat];
+        const needed = target.needed - target.collected;
+        
+        showMessage(`💡 Hint: Focus on ${target.name}. Need ${needed} more.`);
+    } else {
+        showMessage("All targets complete! Roll dice to finish.");
+    }
+}
+
+// Toggle Sound
+function toggleSound() {
+    CONFIG.soundEnabled = !CONFIG.soundEnabled;
+    const soundBtn = document.getElementById('soundBtn');
+    soundBtn.innerHTML = CONFIG.soundEnabled ? 
+        '<i class="fas fa-volume-up"></i> SOUND ON' : 
+        '<i class="fas fa-volume-mute"></i> SOUND OFF';
+    
+    showMessage(CONFIG.soundEnabled ? "Sound enabled" : "Sound disabled");
+}
+
+// Update Display
+function updateDisplay() {
+    document.getElementById('currentLevel').textContent = CONFIG.currentLevel;
+    document.getElementById('score').textContent = CONFIG.score;
+    updateDiceDisplay();
+}
+
+// Update Dice Display
+function updateDiceDisplay() {
+    document.getElementById('rollsLeft').textContent = CONFIG.diceCount;
+    document.getElementById('totalRolls').textContent = gameState.totalRolls;
+    
+    const rollBtn = document.getElementById('rollBtn');
+    rollBtn.disabled = CONFIG.diceCount <= 0 || CONFIG.maxSelection > 0;
+}
+
+// Update Targets Display
+function updateTargetsDisplay() {
+    const container = document.getElementById('targetsContainer');
+    container.innerHTML = '';
+    
+    Object.keys(gameState.currentTargets).forEach(category => {
+        const target = gameState.currentTargets[category];
+        const percent = (target.collected / target.needed) * 100;
+        
+        const targetItem = document.createElement('div');
+        targetItem.className = 'target-item';
+        targetItem.innerHTML = `
+            <div class="target-icon">${target.icon}</div>
+            <div class="target-details">
+                <div class="target-name">${target.name}</div>
+                <div class="target-progress">
+                    <div class="progress-bar" style="width: ${Math.min(percent, 100)}%"></div>
+                </div>
+                <div class="target-count">${target.collected}/${target.needed}</div>
+            </div>
+        `;
+        
+        container.appendChild(targetItem);
+    });
+}
+
+// Show Message
+function showMessage(text) {
+    const message = document.getElementById('message');
+    message.innerHTML = text;
+    message.classList.add('show');
+    
+    setTimeout(() => {
+        message.classList.remove('show');
+    }, 3000);
+}
+
+// Get Completion Percentage
+function getCompletionPercent() {
+    const totalNeeded = Object.values(gameState.currentTargets).reduce((a, b) => a + b.needed, 0);
+    const totalCollected = Object.values(gameState.currentTargets).reduce((a, b) => a + b.collected, 0);
+    return Math.round((totalCollected / totalNeeded) * 100);
+}
+
+// Utility Functions
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function weightedRandom(values, weights) {
+    const total = weights.reduce((a, b) => a + b, 0);
+    const random = Math.random() * total;
+    let sum = 0;
+    
+    for (let i = 0; i < values.length; i++) {
+        sum += weights[i];
+        if (random < sum) return values[i];
+    }
+    return values[0];
+}
+
+// Setup Event Listeners
+function setupEventListeners() {
+    document.getElementById('rollBtn').addEventListener('click', rollDice);
+    document.getElementById('resetBtn').addEventListener('click', resetLevel);
+    document.getElementById('hintBtn').addEventListener('click', showHint);
+    document.getElementById('soundBtn').addEventListener('click', toggleSound);
+    document.getElementById('extraBtn').addEventListener('click', getExtraDice);
+    document.getElementById('homeBtn').addEventListener('click', () => {
+        CONFIG.currentLevel = 1;
+        CONFIG.score = 0;
+        initGame();
+        showMessage("Returned to level 1");
+    });
+}
+
+// Initialize when page loads
+window.addEventListener('DOMContentLoaded', initGame);
